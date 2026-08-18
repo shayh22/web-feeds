@@ -3,6 +3,10 @@
  *   <script src="https://your-server/embed.js" data-site="st_xxx" defer></script>
  *   <div data-tells="likes"></div>
  *   <div data-tells="comments"></div>
+ *   <div data-tells="views"></div>   <!-- optional: shows the count -->
+ *
+ * Page views are counted automatically on every visit, with or without a views
+ * widget on the page. Add data-views="off" to the script tag to turn that off.
  *
  * No dependencies, no build step, one network request. The script finds its own
  * server from its src, so the same snippet works on every site.
@@ -56,6 +60,9 @@
             commentsClosed: 'התגובות סגורות.',
             charactersLeft: 'תווים שנותרו',
             justNow: 'הרגע',
+            views: 'צפיות',
+            viewsOne: 'צפייה',
+            viewsToday: 'היום',
         },
         en: {
             comments: 'Comments',
@@ -87,6 +94,9 @@
             commentsClosed: 'Comments are closed.',
             charactersLeft: 'characters left',
             justNow: 'just now',
+            views: 'views',
+            viewsOne: 'view',
+            viewsToday: 'today',
         },
     };
 
@@ -148,6 +158,9 @@
         '.tlx-like[aria-pressed="true"]{border-color:var(--tlx-accent);color:var(--tlx-accent)}',
         '.tlx-heart{font-size:1.1em;line-height:1;transition:transform .2s ease}',
         '.tlx-like[aria-pressed="true"] .tlx-heart{transform:scale(1.15)}',
+        '.tlx-views{display:inline-flex;align-items:center;gap:.4rem;color:var(--tlx-muted);font-size:.9rem}',
+        '.tlx-eye{font-size:1em;line-height:1}',
+        '.tlx-viewnum{font-weight:700;color:var(--tlx-fg);font-variant-numeric:tabular-nums}',
         '@media (prefers-reduced-motion:reduce){.tlx *{transition:none!important}}',
     ].join('');
 
@@ -257,6 +270,38 @@
                 try { window.localStorage.removeItem(key); } catch (error) { /* private mode */ }
             },
         };
+    }
+
+    /* One beacon per page load, at most one counted view per reader every half
+       hour: a reload or a back-navigation should not inflate the number. The
+       throttled call still asks for the current count so the widget stays
+       accurate. */
+    var VIEW_WINDOW_MS = 30 * 60 * 1000;
+    var viewRequest = null;
+
+    function countView(siteKey, page, title) {
+        if (viewRequest) return viewRequest;
+
+        var storageKey = 'tells.views.' + siteKey + ':' + page;
+        var seenRecently = false;
+        try {
+            var last = Number(window.localStorage.getItem(storageKey) || 0);
+            seenRecently = last && (Date.now() - last) < VIEW_WINDOW_MS;
+        } catch (error) { /* private mode: count it */ }
+
+        var query = '?' + new URLSearchParams({ site: siteKey, page: page }).toString();
+        if (seenRecently) {
+            viewRequest = request('/api/v1/views' + query);
+        } else {
+            viewRequest = request('/api/v1/views' + query, {
+                method: 'POST',
+                body: { site: siteKey, page: page, pageUrl: window.location.href, pageTitle: title },
+            }).then(function (data) {
+                try { window.localStorage.setItem(storageKey, String(Date.now())); } catch (error) { /* private mode */ }
+                return data;
+            });
+        }
+        return viewRequest;
     }
 
     function pagePathOf(node) {
@@ -720,12 +765,51 @@
         this.refreshReplyBanner();
     };
 
+    Widget.prototype.mountViews = function () {
+        var self = this;
+        var strings = this.strings;
+        this.node.textContent = '';
+
+        var wrapper = el('span', 'tlx-views');
+        wrapper.appendChild(el('span', 'tlx-eye', '👁'));
+        var number = el('span', 'tlx-viewnum', '—');
+        wrapper.appendChild(number);
+        var label = el('span', 'tlx-viewlabel', strings.views);
+        wrapper.appendChild(label);
+        this.node.appendChild(wrapper);
+
+        var scope = this.node.getAttribute('data-scope') === 'site' ? 'site' : 'page';
+
+        function paint(data) {
+            var count = data.count || 0;
+            number.textContent = count.toLocaleString(self.locale);
+            label.textContent = count === 1 ? strings.viewsOne : strings.views;
+            if (data.today) {
+                wrapper.title = data.today.toLocaleString(self.locale) + ' ' + strings.viewsToday;
+            }
+        }
+
+        countView(this.siteKey, this.page, this.pageTitle)
+            .then(function (data) {
+                if (scope === 'page') return paint(data);
+                /* A site-wide counter needs its own total, not this page's. */
+                return request('/api/v1/views?' + new URLSearchParams({
+                    site: self.siteKey, page: self.page, scope: 'site',
+                }).toString()).then(paint);
+            })
+            .catch(function () {
+                /* A counter that cannot load simply says nothing. */
+                self.node.textContent = '';
+            });
+    };
+
     Widget.prototype.mount = function () {
         if (!this.siteKey) {
             this.fail('Tells Engage: missing data-site');
             return;
         }
         if (this.kind === 'likes') this.mountLikes();
+        else if (this.kind === 'views') this.mountViews();
         else this.mountComments();
     };
 
@@ -736,6 +820,13 @@
             node.setAttribute('data-tells-mounted', '1');
             new Widget(node).mount();
         });
+
+        /* Counting is automatic: a page with no widget at all still registers
+           the visit, as long as the script knows which site it belongs to. */
+        if (DEFAULT_SITE && script.getAttribute('data-views') !== 'off') {
+            countView(DEFAULT_SITE, window.location.pathname, document.title)
+                .catch(function () { /* a failed beacon is not the page's problem */ });
+        }
     }
 
     window.TellsEngage = {

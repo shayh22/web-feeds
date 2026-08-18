@@ -24,6 +24,9 @@ function readConfig(env) {
         sessionTtlHours: int(env.SESSION_TTL_HOURS, 12),
         rateLimits: {
             write: { limit: int(env.RATE_WRITE, 20), windowMs: 60_000 },
+            /* A reader moving through several pages sends one beacon per page,
+               so this bucket is far looser than the one guarding comments. */
+            views: { limit: int(env.RATE_VIEWS, 120), windowMs: 60_000 },
             register: { limit: int(env.RATE_REGISTER, 10), windowMs: 10 * 60_000 },
             login: { limit: int(env.RATE_LOGIN, 10), windowMs: 10 * 60_000 },
         },

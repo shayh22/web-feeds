@@ -12,18 +12,27 @@ export async function all(db, sql, ...args) {
 }
 
 /* The tables are created on demand, so a deploy straight from the Cloudflare
-   dashboard works with no CLI step. The check is one cheap read per isolate;
-   the DDL itself runs only on a database that has never been set up. */
+   dashboard works with no CLI step. Every statement is IF NOT EXISTS, so this
+   also fills in tables added by a later version. */
 export async function ensureSchema(db, schemaSql) {
-    const existing = await one(db, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sites'");
-    if (existing) return false;
-
     const statements = schemaSql
         .split(';')
         .map((statement) => statement.trim())
         .filter((statement) => statement && !statement.split('\n').every((line) => line.trim().startsWith('--')));
-    await db.batch(statements.map((statement) => db.prepare(statement)));
-    return true;
+
+    const known = await one(db, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'page_views'");
+    if (!known) await db.batch(statements.map((statement) => db.prepare(statement)));
+
+    /* CREATE TABLE IF NOT EXISTS cannot add a column to a table that already
+       exists, so a database from an older version is topped up separately.
+       Asking for the column is the portable way to find out whether it is
+       there — D1 exposes no schema introspection beyond sqlite_master. */
+    try {
+        await one(db, 'SELECT views_on FROM sites LIMIT 1');
+    } catch {
+        await run(db, 'ALTER TABLE sites ADD COLUMN views_on INTEGER NOT NULL DEFAULT 1');
+    }
+    return !known;
 }
 
 export async function getSetting(db, key) {
@@ -99,6 +108,7 @@ export function publicSite(site) {
         allowAnonymous: !!site.allow_anonymous,
         commentsEnabled: !!site.comments_on,
         likesEnabled: !!site.likes_on,
+        viewsEnabled: !!site.views_on,
     };
 }
 
@@ -112,6 +122,7 @@ export function adminSite(row) {
         allowAnonymous: !!row.allow_anonymous,
         commentsOn: !!row.comments_on,
         likesOn: !!row.likes_on,
+        viewsOn: !!row.views_on,
         locale: row.locale,
         active: !!row.active,
         createdAt: row.created_at,

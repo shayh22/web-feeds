@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS sites (
     allow_anonymous INTEGER NOT NULL DEFAULT 1,
     comments_on     INTEGER NOT NULL DEFAULT 1,
     likes_on        INTEGER NOT NULL DEFAULT 1,
+    views_on        INTEGER NOT NULL DEFAULT 1,
     locale          TEXT NOT NULL DEFAULT 'he',
     active          INTEGER NOT NULL DEFAULT 1,
     created_at      TEXT NOT NULL
@@ -72,6 +73,22 @@ CREATE TABLE IF NOT EXISTS likes (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS likes_unique ON likes(site_id, page_path, visitor_id);
 CREATE INDEX IF NOT EXISTS likes_site_page ON likes(site_id, page_path);
+
+-- Views are counted per page per day rather than one row per visit: the
+-- dashboard only asks for totals and daily trends, and a busy page must not
+-- turn into a million rows.
+CREATE TABLE IF NOT EXISTS page_views (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id    INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    page_path  TEXT NOT NULL,
+    day        TEXT NOT NULL,
+    views      INTEGER NOT NULL DEFAULT 0,
+    page_title TEXT,
+    page_url   TEXT,
+    last_at    TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS page_views_unique ON page_views(site_id, page_path, day);
+CREATE INDEX IF NOT EXISTS page_views_day ON page_views(day);
 
 CREATE TABLE IF NOT EXISTS admin_sessions (
     token_hash TEXT PRIMARY KEY,

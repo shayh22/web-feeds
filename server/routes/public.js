@@ -11,6 +11,7 @@ import {
     tokenFromRequest, touchVisitor,
 } from '../auth.js';
 import { decideStatus, getBlocklist, scoreComment } from '../../shared/moderation.js';
+import { isLikelyBot } from '../../shared/bots.js';
 import { getSetting, logAudit } from '../db.js';
 import { rateLimit } from '../ratelimit.js';
 
@@ -56,7 +57,25 @@ function publicSite(site) {
         allowAnonymous: !!site.allow_anonymous,
         commentsEnabled: !!site.comments_on,
         likesEnabled: !!site.likes_on,
+        viewsEnabled: !!site.views_on,
     };
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function viewCounts(db, site, page, scope) {
+    if (scope === 'site') {
+        const total = db.prepare('SELECT COALESCE(SUM(views), 0) AS n FROM page_views WHERE site_id = ?').get(site.id);
+        const day = db.prepare('SELECT COALESCE(SUM(views), 0) AS n FROM page_views WHERE site_id = ? AND day = ?')
+            .get(site.id, today());
+        return { count: total.n, today: day.n, scope: 'site' };
+    }
+    const total = db.prepare('SELECT COALESCE(SUM(views), 0) AS n FROM page_views WHERE site_id = ? AND page_path = ?')
+        .get(site.id, page);
+    const day = db.prepare(
+        'SELECT COALESCE(views, 0) AS n FROM page_views WHERE site_id = ? AND page_path = ? AND day = ?')
+        .get(site.id, page, today());
+    return { count: total.n, today: day ? day.n : 0, scope: 'page' };
 }
 
 function publicComment(row) {
@@ -329,6 +348,45 @@ async function toggleLike(ctx, req, res, url, body) {
     sendJson(res, 200, { page, count: n, liked });
 }
 
+async function getViews(ctx, req, res, url) {
+    limitOr429(ctx, req, 'read', 'read');
+    const site = requireSite(ctx.db, url.searchParams.get('site'));
+    assertOriginAllowed(req, site);
+    const page = normalizePagePath(url.searchParams.get('page'), url.searchParams.get('url'));
+    const scope = url.searchParams.get('scope') === 'site' ? 'site' : 'page';
+    sendJson(res, 200, { site: publicSite(site), page, ...viewCounts(ctx.db, site, page, scope) });
+}
+
+/* Counting a visit needs no identity — that is what makes it automatic. Repeat
+   views from the same reader are thinned client-side; announced crawlers are
+   dropped here, and get an honest count back rather than an error. */
+async function recordView(ctx, req, res, url, body) {
+    limitOr429(ctx, req, 'views', 'views');
+    const site = requireSite(ctx.db, body.site || url.searchParams.get('site'));
+    assertOriginAllowed(req, site);
+    const page = normalizePagePath(body.page, body.pageUrl);
+    const scope = body.scope === 'site' ? 'site' : 'page';
+
+    if (!site.views_on || isLikelyBot(req.headers['user-agent'])) {
+        sendJson(res, 200, { page, counted: false, ...viewCounts(ctx.db, site, page, scope) });
+        return;
+    }
+
+    ctx.db.prepare(`INSERT INTO page_views (site_id, page_path, day, views, page_title, page_url, last_at)
+                    VALUES (?, ?, ?, 1, ?, ?, ?)
+                    ON CONFLICT(site_id, page_path, day) DO UPDATE SET
+                        views = page_views.views + 1,
+                        page_title = COALESCE(excluded.page_title, page_views.page_title),
+                        page_url = COALESCE(excluded.page_url, page_views.page_url),
+                        last_at = excluded.last_at`)
+        .run(site.id, page, today(),
+            typeof body.pageTitle === 'string' ? body.pageTitle.slice(0, 300) : null,
+            typeof body.pageUrl === 'string' ? body.pageUrl.slice(0, 1024) : null,
+            new Date().toISOString());
+
+    sendJson(res, 200, { page, counted: true, ...viewCounts(ctx.db, site, page, scope) });
+}
+
 export async function handlePublicRoute(ctx, req, res, url) {
     const { pathname } = url;
     const method = req.method;
@@ -337,12 +395,14 @@ export async function handlePublicRoute(ctx, req, res, url) {
         if (pathname === '/api/v1/site') { await getSiteConfig(ctx, req, res, url); return true; }
         if (pathname === '/api/v1/comments') { await listComments(ctx, req, res, url); return true; }
         if (pathname === '/api/v1/likes') { await getLikes(ctx, req, res, url); return true; }
+        if (pathname === '/api/v1/views') { await getViews(ctx, req, res, url); return true; }
     }
 
-    if (method === 'POST' && ['/api/v1/visitors', '/api/v1/comments', '/api/v1/likes'].includes(pathname)) {
+    if (method === 'POST' && ['/api/v1/visitors', '/api/v1/comments', '/api/v1/likes', '/api/v1/views'].includes(pathname)) {
         const body = await readJsonBody(req, ctx.config.bodyLimitBytes);
         if (pathname === '/api/v1/visitors') { await registerVisitor(ctx, req, res, url, body); return true; }
         if (pathname === '/api/v1/comments') { await createComment(ctx, req, res, url, body); return true; }
+        if (pathname === '/api/v1/views') { await recordView(ctx, req, res, url, body); return true; }
         await toggleLike(ctx, req, res, url, body);
         return true;
     }

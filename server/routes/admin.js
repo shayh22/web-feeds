@@ -45,6 +45,7 @@ function siteRow(row) {
         allowAnonymous: !!row.allow_anonymous,
         commentsOn: !!row.comments_on,
         likesOn: !!row.likes_on,
+        viewsOn: !!row.views_on,
         locale: row.locale,
         active: !!row.active,
         createdAt: row.created_at,
@@ -143,6 +144,7 @@ function overview(ctx, res) {
         approved: one(`SELECT COUNT(*) AS n FROM comments WHERE status = 'approved'`).n,
         rejected: one(`SELECT COUNT(*) AS n FROM comments WHERE status = 'rejected'`).n,
         likes: one('SELECT COUNT(*) AS n FROM likes').n,
+        views: one('SELECT COALESCE(SUM(views), 0) AS n FROM page_views').n,
         visitors: one('SELECT COUNT(*) AS n FROM visitors').n,
         emailVisitors: one(`SELECT COUNT(*) AS n FROM visitors WHERE kind = 'email'`).n,
         anonymousVisitors: one(`SELECT COUNT(*) AS n FROM visitors WHERE kind = 'anonymous'`).n,
@@ -153,6 +155,7 @@ function overview(ctx, res) {
                (SELECT COUNT(*) FROM comments c WHERE c.site_id = s.id) AS comments,
                (SELECT COUNT(*) FROM comments c WHERE c.site_id = s.id AND c.status = 'pending') AS pending,
                (SELECT COUNT(*) FROM likes l WHERE l.site_id = s.id) AS likes,
+               (SELECT COALESCE(SUM(v.views), 0) FROM page_views v WHERE v.site_id = s.id) AS views,
                (SELECT COUNT(*) FROM visitors v WHERE v.site_id = s.id) AS visitors
         FROM sites s ORDER BY s.name`).all();
 
@@ -165,6 +168,9 @@ function overview(ctx, res) {
         SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS likes
         FROM likes WHERE substr(created_at, 1, 10) >= ?
         GROUP BY day ORDER BY day`).all(since);
+
+    const dailyViews = db.prepare(`
+        SELECT day, SUM(views) AS views FROM page_views WHERE day >= ? GROUP BY day ORDER BY day`).all(since);
 
     const topPages = db.prepare(`
         SELECT s.name AS site_name, l.page_path, l.page_title, COUNT(*) AS likes
@@ -181,6 +187,7 @@ function overview(ctx, res) {
         perSite,
         daily,
         dailyLikes,
+        dailyViews,
         topPages,
         latest: latest.map(commentRow),
     });
@@ -211,14 +218,15 @@ function createSite(ctx, res, body) {
     const origins = parseOrigins(body.origins);
     const key = newSiteKey();
     const info = ctx.db.prepare(`INSERT INTO sites
-            (key, name, origins, moderation, allow_anonymous, comments_on, likes_on, locale, active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`)
+            (key, name, origins, moderation, allow_anonymous, comments_on, likes_on, views_on, locale, active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`)
         .run(
             key, name, JSON.stringify(origins),
             body.moderation === 'post' ? 'post' : 'pre',
             body.allowAnonymous === false ? 0 : 1,
             body.commentsOn === false ? 0 : 1,
             body.likesOn === false ? 0 : 1,
+            body.viewsOn === false ? 0 : 1,
             body.locale === 'en' ? 'en' : 'he',
             new Date().toISOString(),
         );
@@ -238,13 +246,14 @@ function updateSite(ctx, res, id, body) {
         allow_anonymous: body.allowAnonymous !== undefined ? (body.allowAnonymous ? 1 : 0) : existing.allow_anonymous,
         comments_on: body.commentsOn !== undefined ? (body.commentsOn ? 1 : 0) : existing.comments_on,
         likes_on: body.likesOn !== undefined ? (body.likesOn ? 1 : 0) : existing.likes_on,
+        views_on: body.viewsOn !== undefined ? (body.viewsOn ? 1 : 0) : existing.views_on,
         locale: body.locale !== undefined ? (body.locale === 'en' ? 'en' : 'he') : existing.locale,
         active: body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
     };
     ctx.db.prepare(`UPDATE sites SET name = ?, origins = ?, moderation = ?, allow_anonymous = ?,
-                    comments_on = ?, likes_on = ?, locale = ?, active = ? WHERE id = ?`)
+                    comments_on = ?, likes_on = ?, views_on = ?, locale = ?, active = ? WHERE id = ?`)
         .run(next.name, next.origins, next.moderation, next.allow_anonymous,
-            next.comments_on, next.likes_on, next.locale, next.active, id);
+            next.comments_on, next.likes_on, next.views_on, next.locale, next.active, id);
     const row = ctx.db.prepare('SELECT * FROM sites WHERE id = ?').get(id);
     logAudit(ctx.db, 'site.update', 'site', id, { name: next.name });
     sendJson(res, 200, { site: siteRow(row) });
@@ -416,6 +425,36 @@ function listLikes(ctx, res, url) {
     sendJson(res, 200, { pages: rows });
 }
 
+/* One row per page, joining what the counter recorded with the likes and
+   approved comments on the same page. */
+function listViews(ctx, res, url) {
+    const siteId = num(url.searchParams.get('site'), 0);
+    const args = [];
+    let clause = '';
+    if (siteId) { clause = 'WHERE v.site_id = ?'; args.push(siteId); }
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    const rows = ctx.db.prepare(`
+        SELECT s.name AS site_name, v.site_id, v.page_path,
+               MAX(v.page_title) AS page_title, MAX(v.page_url) AS page_url,
+               SUM(v.views) AS views,
+               COALESCE(SUM(CASE WHEN v.day = ? THEN v.views END), 0) AS views_today,
+               MAX(v.last_at) AS last_at,
+               (SELECT COUNT(*) FROM likes l WHERE l.site_id = v.site_id AND l.page_path = v.page_path) AS likes,
+               (SELECT COUNT(*) FROM comments c WHERE c.site_id = v.site_id AND c.page_path = v.page_path
+                    AND c.status = 'approved') AS comments
+        FROM page_views v JOIN sites s ON s.id = v.site_id
+        ${clause}
+        GROUP BY v.site_id, v.page_path ORDER BY views DESC LIMIT 200`).all(todayKey, ...args);
+
+    const totals = ctx.db.prepare(`
+        SELECT COALESCE(SUM(views), 0) AS total,
+               COALESCE(SUM(CASE WHEN day = ? THEN views END), 0) AS today
+        FROM page_views v ${clause}`).get(todayKey, ...args);
+
+    sendJson(res, 200, { pages: rows, totals });
+}
+
 function readSettings(ctx, res) {
     let blocklist = [];
     try { blocklist = JSON.parse(getSetting(ctx.db, 'blocklist') || '[]'); } catch { blocklist = []; }
@@ -523,6 +562,7 @@ export async function handleAdminRoute(ctx, req, res, url) {
     if (match && method === 'POST') { setVisitorBlocked(ctx, res, Number(match[1]), body.blocked !== false); return true; }
 
     if (route === '/likes' && method === 'GET') { listLikes(ctx, res, url); return true; }
+    if (route === '/views' && method === 'GET') { listViews(ctx, res, url); return true; }
     if (route === '/settings' && method === 'GET') { readSettings(ctx, res); return true; }
     if (route === '/settings' && method === 'PATCH') { writeSettings(ctx, res, body); return true; }
     if (route === '/audit' && method === 'GET') { listAudit(ctx, res, url); return true; }

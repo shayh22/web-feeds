@@ -157,6 +157,20 @@ async function main() {
     const unlike = await call('/api/v1/likes', { method: 'POST', token: liveToken, body: { site: site.key, page: '/contract' } });
     check('ביטול לייק', unlike.body.count === 0 && unlike.body.liked === false, unlike.body);
 
+    console.log('\nצפיות');
+    const viewOne = await call('/api/v1/views', {
+        method: 'POST', body: { site: site.key, page: '/contract', pageTitle: 'בדיקת חוזה' },
+    });
+    check('ביקור נספר אוטומטית', viewOne.body.counted === true && viewOne.body.count >= 1, viewOne.body);
+    const viewTwo = await call('/api/v1/views', { method: 'POST', body: { site: site.key, page: '/contract' } });
+    check('ספירה מצטברת', viewTwo.body.count === viewOne.body.count + 1, viewTwo.body);
+    const viewRead = await call(`/api/v1/views?site=${site.key}&page=/contract`);
+    check('קריאת המונה לא סופרת', viewRead.body.count === viewTwo.body.count, viewRead.body);
+    const adminViews = await call('/admin/api/views', { admin: true });
+    check('הצפיות מופיעות בדשבורד',
+        adminViews.status === 200 && adminViews.body.pages.some((row) => row.page_path === '/contract'),
+        adminViews.body);
+
     console.log('\nהרשאות');
     const noIdentity = await call('/api/v1/comments', {
         method: 'POST', body: { site: site.key, page: '/contract', body: 'ללא זהות' },

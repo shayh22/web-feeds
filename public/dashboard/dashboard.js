@@ -155,6 +155,7 @@
         var loaders = {
             overview: loadOverview,
             comments: loadComments,
+            views: loadViews,
             likes: loadLikes,
             sites: renderSites,
             visitors: loadVisitors,
@@ -180,6 +181,7 @@
                 { label: 'תגובות ממתינות', value: data.totals.pending, attention: data.totals.pending > 0 },
                 { label: 'תגובות מאושרות', value: data.totals.approved },
                 { label: 'סה"כ תגובות', value: data.totals.comments },
+                { label: 'צפיות', value: data.totals.views },
                 { label: 'לייקים', value: data.totals.likes },
                 { label: 'מבקרים רשומים', value: data.totals.visitors },
                 { label: 'אתרים', value: data.totals.sites },
@@ -191,7 +193,7 @@
             });
 
             updatePendingBadge(data.totals.pending);
-            renderChart(data.daily, data.dailyLikes);
+            renderChart(data.daily, data.dailyLikes, data.dailyViews);
 
             renderInto($('#topPages'), data.topPages.length ? table(
                 ['אתר', 'דף', 'לייקים'],
@@ -201,10 +203,11 @@
             ) : null, 'עדיין אין לייקים.');
 
             renderInto($('#perSite'), data.perSite.length ? table(
-                ['אתר', 'תגובות', 'ממתינות', 'לייקים', 'מבקרים'],
+                ['אתר', 'צפיות', 'תגובות', 'ממתינות', 'לייקים', 'מבקרים'],
                 data.perSite.map(function (row) {
                     return [
                         row.name,
+                        { text: String(row.views), className: 'num' },
                         { text: String(row.comments), className: 'num' },
                         { text: String(row.pending), className: 'num' },
                         { text: String(row.likes), className: 'num' },
@@ -463,6 +466,44 @@
         link.href = '/admin/api/comments/export' + (state.comments.site ? '?site=' + state.comments.site : '');
     }
 
+    /* ---- views ---- */
+
+    function loadViews() {
+        api('/views' + (state.comments.site ? '?site=' + state.comments.site : '')).then(function (data) {
+            var stats = clear($('#viewStats'));
+            [
+                { label: 'סה"כ צפיות', value: data.totals.total },
+                { label: 'צפיות היום', value: data.totals.today },
+                { label: 'דפים שנצפו', value: data.pages.length },
+            ].forEach(function (item) {
+                var card = h('div', 'stat');
+                card.appendChild(h('div', 'value', String(item.value)));
+                card.appendChild(h('div', 'label', item.label));
+                stats.appendChild(card);
+            });
+
+            renderInto($('#viewsTable'), data.pages.length ? table(
+                ['אתר', 'דף', 'צפיות', 'היום', 'לייקים', 'תגובות', 'צפייה אחרונה'],
+                data.pages.map(function (row) {
+                    var page = row.page_url ? h('a', null, row.page_title || row.page_path) : h('span', null, row.page_path);
+                    if (row.page_url) {
+                        page.href = row.page_url;
+                        page.target = '_blank';
+                        page.rel = 'noopener noreferrer';
+                    }
+                    return [
+                        row.site_name, page,
+                        { text: String(row.views), className: 'num' },
+                        { text: String(row.views_today), className: 'num' },
+                        { text: String(row.likes), className: 'num' },
+                        { text: String(row.comments), className: 'num' },
+                        formatDate(row.last_at),
+                    ];
+                }),
+            ) : null, 'עדיין לא נספרו צפיות. הן נספרות אוטומטית בכל ביקור בדף שמוטמע בו קוד ההטמעה.');
+        }).catch(function (error) { toast(error.message, true); });
+    }
+
     /* ---- likes ---- */
 
     function loadLikes() {
@@ -524,6 +565,7 @@
                 var stats = h('div', 'stats');
                 stats.appendChild(h('span', null, site.moderation === 'pre' ? 'אישור לפני פרסום' : 'פרסום מיידי'));
                 stats.appendChild(h('span', null, site.allowAnonymous ? 'אנונימי מותר' : 'אימייל בלבד'));
+                stats.appendChild(h('span', null, site.viewsOn ? 'צפיות נספרות' : 'ספירת צפיות כבויה'));
                 if (!site.active) stats.appendChild(h('span', null, 'כבוי'));
                 card.appendChild(stats);
 
@@ -580,6 +622,7 @@
         $('#siteAnonymous').checked = site ? site.allowAnonymous : true;
         $('#siteComments').checked = site ? site.commentsOn : true;
         $('#siteLikes').checked = site ? site.likesOn : true;
+        $('#siteViews').checked = site ? site.viewsOn : true;
         $('#siteError').hidden = true;
         dialog.showModal();
     }
@@ -597,6 +640,7 @@
             allowAnonymous: $('#siteAnonymous').checked,
             commentsOn: $('#siteComments').checked,
             likesOn: $('#siteLikes').checked,
+            viewsOn: $('#siteViews').checked,
         };
         var request = state.editingSite
             ? api('/sites/' + state.editingSite.id, { method: 'PATCH', body: payload })

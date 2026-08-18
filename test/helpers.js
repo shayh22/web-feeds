@@ -30,6 +30,7 @@ export function baseConfig(overrides = {}) {
         rateLimits: {
             read: { limit: 1000, windowMs: 60_000 },
             write: { limit: 1000, windowMs: 60_000 },
+            views: { limit: 1000, windowMs: 60_000 },
             register: { limit: 1000, windowMs: 60_000 },
             login: { limit: 1000, windowMs: 60_000 },
         },

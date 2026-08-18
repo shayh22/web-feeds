@@ -18,6 +18,7 @@
         .missing { background: #fee2e2; color: #991b1b; border-radius: 12px; padding: 1rem; }
         .hint { color: var(--muted); font-size: .9rem; }
         hr { border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+        .row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
     </style>
 </head>
 <body>
@@ -30,8 +31,12 @@
         <h1>עמוד לדוגמה</h1>
         <p>זהו עמוד הדגמה שמראה איך שני הרכיבים נראים ומתנהגים בתוך תוכן אמיתי. הלייקים והתגובות
            נשמרים בשרת ומופיעים מיד בדשבורד הניהול.</p>
-        <p class="hint">כל דף מזוהה לפי הנתיב שלו, כך שלכל עמוד באתר יש שרשור תגובות משלו.</p>
-        <div data-tells="likes"></div>
+        <p class="hint">כל דף מזוהה לפי הנתיב שלו, כך שלכל עמוד באתר יש שרשור תגובות משלו.
+           הצפיות נספרות אוטומטית בכל ביקור, גם בלי הרכיב שמציג אותן.</p>
+        <div class="row">
+            <div data-tells="likes"></div>
+            <div data-tells="views"></div>
+        </div>
     </article>
 
     <hr>

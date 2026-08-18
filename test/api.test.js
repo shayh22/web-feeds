@@ -461,3 +461,86 @@ test('CSV export includes the moderated comments', async (t) => {
     const csv = await response.text();
     assert.match(csv, /שורה לייצוא/);
 });
+
+test('a visit is counted automatically, with no visitor identity', async (t) => {
+    const server = await startServer();
+    t.after(() => server.stop());
+    const { client } = server;
+    const site = await withSite(client);
+
+    const first = await client.call('/api/v1/views', {
+        method: 'POST',
+        headers: { 'user-agent': 'Mozilla/5.0 (iPhone) Safari/605.1' },
+        body: { site: site.key, page: '/story-1.html', pageTitle: 'לב הגביש' },
+    });
+    assert.equal(first.status, 200);
+    assert.equal(first.body.counted, true);
+    assert.equal(first.body.count, 1);
+
+    await client.call('/api/v1/views', {
+        method: 'POST',
+        headers: { 'user-agent': 'Mozilla/5.0 (iPhone) Safari/605.1' },
+        body: { site: site.key, page: '/story-1.html' },
+    });
+
+    const view = await client.call(`/api/v1/views?site=${site.key}&page=/story-1.html`);
+    assert.equal(view.body.count, 2);
+    assert.equal(view.body.today, 2);
+
+    /* Another page keeps its own tally, and the site scope adds them up. */
+    await client.call('/api/v1/views', {
+        method: 'POST',
+        headers: { 'user-agent': 'Mozilla/5.0 (iPhone) Safari/605.1' },
+        body: { site: site.key, page: '/story-2.html' },
+    });
+    const siteWide = await client.call(`/api/v1/views?site=${site.key}&page=/&scope=site`);
+    assert.equal(siteWide.body.count, 3);
+    assert.equal(siteWide.body.scope, 'site');
+});
+
+test('crawlers and a disabled counter do not inflate the numbers', async (t) => {
+    const server = await startServer();
+    t.after(() => server.stop());
+    const { client } = server;
+    const site = await withSite(client);
+
+    const bot = await client.call('/api/v1/views', {
+        method: 'POST',
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+        body: { site: site.key, page: '/p' },
+    });
+    assert.equal(bot.status, 200);
+    assert.equal(bot.body.counted, false);
+    assert.equal(bot.body.count, 0);
+
+    await client.admin(`/sites/${site.id}`, { method: 'PATCH', body: { viewsOn: false } });
+    const disabled = await client.call('/api/v1/views', {
+        method: 'POST',
+        headers: { 'user-agent': 'Mozilla/5.0 (Macintosh) Firefox/128.0' },
+        body: { site: site.key, page: '/p' },
+    });
+    assert.equal(disabled.body.counted, false);
+    assert.equal(disabled.body.count, 0);
+});
+
+test('the dashboard reports views per page and per site', async (t) => {
+    const server = await startServer();
+    t.after(() => server.stop());
+    const { client } = server;
+    const site = await withSite(client);
+    const agent = { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0) Chrome/126.0' };
+
+    for (const page of ['/a', '/a', '/b']) {
+        await client.call('/api/v1/views', { method: 'POST', headers: agent, body: { site: site.key, page } });
+    }
+
+    const overview = await client.admin('/overview');
+    assert.equal(overview.body.totals.views, 3);
+    assert.equal(overview.body.perSite[0].views, 3);
+    assert.equal(overview.body.dailyViews.at(-1).views, 3);
+
+    const views = await client.admin('/views');
+    assert.equal(views.body.totals.total, 3);
+    assert.equal(views.body.totals.today, 3);
+    assert.deepEqual(views.body.pages.map((row) => [row.page_path, row.views]), [['/a', 2], ['/b', 1]]);
+});

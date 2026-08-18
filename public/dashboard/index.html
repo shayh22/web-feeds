@@ -31,6 +31,7 @@
         <nav>
             <button type="button" class="nav-item is-active" data-view="overview"><span aria-hidden="true">📊</span> סקירה</button>
             <button type="button" class="nav-item" data-view="comments"><span aria-hidden="true">💬</span> תגובות <span class="pill" id="pendingPill" hidden>0</span></button>
+            <button type="button" class="nav-item" data-view="views"><span aria-hidden="true">👁</span> צפיות</button>
             <button type="button" class="nav-item" data-view="likes"><span aria-hidden="true">❤️</span> לייקים</button>
             <button type="button" class="nav-item" data-view="sites"><span aria-hidden="true">🌐</span> אתרים</button>
             <button type="button" class="nav-item" data-view="visitors"><span aria-hidden="true">👥</span> מבקרים</button>
@@ -107,6 +108,16 @@
                 <span id="pageInfo"></span>
                 <button type="button" class="btn ghost small" id="nextPage">הבא</button>
             </div>
+        </section>
+
+        <!-- צפיות -->
+        <section class="view" data-view="views">
+            <header class="view-head">
+                <h1>צפיות בדפים</h1>
+                <button type="button" class="btn ghost small" data-refresh="views">רענון</button>
+            </header>
+            <div class="stat-grid" id="viewStats"></div>
+            <div id="viewsTable" class="mini-table"></div>
         </section>
 
         <!-- לייקים -->
