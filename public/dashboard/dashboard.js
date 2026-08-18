@@ -544,11 +544,14 @@
         });
     }
 
+    /* The snippet mirrors what the site actually has switched on, so a moderator
+       never pastes a widget the server will refuse. */
     function snippetFor(site) {
-        var origin = window.location.origin;
-        return '<script src="' + origin + '/embed.js" data-site="' + site.key + '" defer><\/script>\n'
-            + '<div data-tells="likes"></div>\n'
-            + '<div data-tells="comments"></div>';
+        var lines = ['<script src="' + window.location.origin + '/embed.js" data-site="' + site.key + '" defer><\/script>'];
+        if (site.likesOn) lines.push('<div data-tells="likes"></div>');
+        if (site.viewsOn) lines.push('<div data-tells="views"></div>');
+        if (site.commentsOn) lines.push('<div data-tells="comments"></div>');
+        return lines.join('\n');
     }
 
     function renderSites() {
