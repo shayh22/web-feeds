@@ -2,7 +2,8 @@
    the cross-origin widget API under /api/v1, the dashboard API under
    /admin/api, and the static files — served here from the assets binding. */
 import { HttpError, clientIp, corsHeaders, errorResponse, json, parseCookies, withHeaders } from './http.js';
-import { allowedOriginsFor, ensureIpSalt, siteByKey } from './store.js';
+import { allowedOriginsFor, ensureIpSalt, ensureSchema, siteByKey } from './store.js';
+import schemaSql from '../schema.sql';
 import { purgeExpiredSessions } from './auth.js';
 import { sweepRateHits } from './ratelimit.js';
 import { handlePublicRoute } from './routes/public.js';
@@ -98,10 +99,14 @@ export default {
         }
 
         try {
-            cachedSalt = cachedSalt || await ensureIpSalt(env.DB);
+            if (!cachedSalt) {
+                await ensureSchema(env.DB, schemaSql);
+                cachedSalt = await ensureIpSalt(env.DB);
+            }
         } catch (error) {
-            return errorResponse(503, 'schema_missing',
-                'הטבלאות עדיין לא נוצרו. הריצו: npx wrangler d1 execute tells-engage --file schema.sql --remote');
+            console.error('database not ready', error);
+            return errorResponse(503, 'database_not_ready',
+                'מסד הנתונים לא מוכן. בדקו שקיים binding בשם DB שמחובר למסד D1.');
         }
 
         const ip = clientIp(request);

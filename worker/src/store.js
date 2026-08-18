@@ -11,6 +11,21 @@ export async function all(db, sql, ...args) {
     return result.results ?? [];
 }
 
+/* The tables are created on demand, so a deploy straight from the Cloudflare
+   dashboard works with no CLI step. The check is one cheap read per isolate;
+   the DDL itself runs only on a database that has never been set up. */
+export async function ensureSchema(db, schemaSql) {
+    const existing = await one(db, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sites'");
+    if (existing) return false;
+
+    const statements = schemaSql
+        .split(';')
+        .map((statement) => statement.trim())
+        .filter((statement) => statement && !statement.split('\n').every((line) => line.trim().startsWith('--')));
+    await db.batch(statements.map((statement) => db.prepare(statement)));
+    return true;
+}
+
 export async function getSetting(db, key) {
     const row = await one(db, 'SELECT value FROM settings WHERE key = ?', key);
     return row ? row.value : null;

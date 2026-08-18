@@ -11,7 +11,9 @@
 
 ---
 
-## פריסה בשבעה צעדים
+## פריסה משורת הפקודה
+
+(מהטלפון אפשר לעשות את הכול מהדשבורד של Cloudflare — ראו את הסעיף הבא.)
 
 ```bash
 cd worker
@@ -27,15 +29,15 @@ npx wrangler d1 create web-feeds
 הפקודה מדפיסה `database_id`. העתיקו אותו אל `wrangler.toml`, במקום `REPLACE_WITH_YOUR_DATABASE_ID`.
 
 ```bash
-# 3. יצירת הטבלאות בענן
-npm run db:init
-
-# 4. קביעת סיסמת הדשבורד (נשמרת כסוד, לא בקוד)
+# 3. קביעת סיסמת הדשבורד (נשמרת כסוד, לא בקוד)
 npx wrangler secret put ADMIN_PASSWORD
 
-# 5. פריסה
+# 4. פריסה
 npm run deploy
 ```
+
+הטבלאות נוצרות מאליהן בבקשה הראשונה, כך שאין שלב נפרד של הקמת סכימה. `npm run db:init`
+קיים כאופציה למי שמעדיף ליצור אותן מראש.
 
 בסוף הפריסה מודפסת הכתובת, למשל `https://web-feeds.<שם-החשבון>.workers.dev`.
 
@@ -63,7 +65,6 @@ node ../test/contract.mjs https://web-feeds.<שם-החשבון>.workers.dev 'ה�
 ```bash
 cd worker
 npm install
-npm run db:init:local                       # טבלאות במסד מקומי
 printf 'ADMIN_PASSWORD=local-dev-pass\n' > .dev.vars
 npm run dev                                 # http://127.0.0.1:8787
 ```
@@ -123,3 +124,20 @@ npx wrangler d1 export web-feeds --remote --output backup.sql   # גיבוי
 בתוכנית החינמית של D1 יש 5GB אחסון, 5 מיליון שורות קריאה ו־100 אלף שורות כתיבה ביום —
 הרבה מעבר לאתר תוכן רגיל. קריאה של תגובות ולייקים לא כותבת כלום; רק הרשמה, תגובה, לייק
 ופעולות ניהול כותבות.
+
+
+---
+
+## פריסה מהדפדפן, בלי שורת פקודה
+
+מתאים לטלפון. כל השלבים בדשבורד של Cloudflare ובאתר GitHub:
+
+1. **[dash.cloudflare.com](https://dash.cloudflare.com)** → Storage & Databases → D1 → **Create** → שם: `web-feeds`.
+   מעתיקים את ה־**Database ID** מעמוד המסד.
+2. ב־GitHub פותחים את `worker/wrangler.toml`, לוחצים על העיפרון, ומחליפים את
+   `REPLACE_WITH_YOUR_DATABASE_ID` ב־ID שהעתקתם → Commit.
+3. בדשבורד → **Workers & Pages** → Create → **Import a repository** → בוחרים את `web-feeds`,
+   ומגדירים **Root directory** = `worker` → Deploy.
+4. אחרי הפריסה: Worker → Settings → **Variables and Secrets** → Add → Secret בשם
+   `ADMIN_PASSWORD` → שומרים ומפעילים Deploy מחדש.
+5. נכנסים ל־`https://web-feeds.<החשבון>.workers.dev/admin/`. הטבלאות נוצרות בבקשה הראשונה.

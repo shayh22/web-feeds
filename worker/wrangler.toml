@@ -5,6 +5,12 @@ compatibility_date = "2025-09-01"
 # The dashboard, the embed script and the demo page are the same files the Node
 # server serves. The Worker runs first so it can route /admin/ and /api/v1/
 # itself and hand everything else to the asset store.
+# schema.sql is bundled as text so the Worker can create its own tables on the
+# first request — a dashboard-only deploy never runs a CLI command.
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+
 [assets]
 directory = "../public"
 binding = "ASSETS"
