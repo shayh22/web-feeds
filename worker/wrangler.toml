@@ -21,7 +21,7 @@ run_worker_first = true
 [[d1_databases]]
 binding = "DB"
 database_name = "web-feeds"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_id = "6d5886b1-ece9-4169-9c79-1122f0e5ef7f"
 
 [vars]
 # A "valid email" is checked for syntax and disposable providers, and then for a
