@@ -4,6 +4,7 @@
 import { HttpError, cookieHeader, json, readJson } from '../http.js';
 import { hashIp, newSiteKey } from '../crypto.js';
 import { normalizeOrigin } from '../../../shared/validation.js';
+import { normalizeLocale } from '../../../shared/locales.js';
 import {
     adminPasswordConfigured, checkAdminPassword, createAdminSession, destroyAdminSession,
     readAdminSession, setAdminPassword,
@@ -150,7 +151,7 @@ async function createSite(ctx, body) {
         body.commentsOn === false ? 0 : 1,
         body.likesOn === false ? 0 : 1,
         body.viewsOn === false ? 0 : 1,
-        body.locale === 'en' ? 'en' : 'he',
+        normalizeLocale(body.locale),
         new Date().toISOString());
 
     const row = await siteById(ctx.db, result.meta.last_row_id);
@@ -170,7 +171,7 @@ async function updateSite(ctx, id, body) {
         commentsOn: body.commentsOn !== undefined ? (body.commentsOn ? 1 : 0) : existing.comments_on,
         likesOn: body.likesOn !== undefined ? (body.likesOn ? 1 : 0) : existing.likes_on,
         viewsOn: body.viewsOn !== undefined ? (body.viewsOn ? 1 : 0) : existing.views_on,
-        locale: body.locale !== undefined ? (body.locale === 'en' ? 'en' : 'he') : existing.locale,
+        locale: body.locale !== undefined ? normalizeLocale(body.locale) : existing.locale,
         active: body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
     };
     await run(ctx.db, `UPDATE sites SET name = ?, origins = ?, moderation = ?, allow_anonymous = ?,

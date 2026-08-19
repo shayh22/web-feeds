@@ -544,3 +544,47 @@ test('the dashboard reports views per page and per site', async (t) => {
     assert.equal(views.body.totals.today, 3);
     assert.deepEqual(views.body.pages.map((row) => [row.page_path, row.views]), [['/a', 2], ['/b', 1]]);
 });
+
+test('a site can be created in any supported locale, and an unknown one falls back', async (t) => {
+    const server = await startServer();
+    t.after(() => server.stop());
+    const { client } = server;
+
+    for (const locale of ['he', 'en', 'ru', 'es', 'zh']) {
+        const site = await withSite(client, { name: `Site ${locale}`, locale });
+        assert.equal(site.locale, locale, `the site did not keep the ${locale} locale`);
+    }
+
+    const unknown = await withSite(client, { name: 'Klingon', locale: 'tlh' });
+    assert.equal(unknown.locale, 'he');
+});
+
+test('an anonymous visitor is named in the language they were reading', async (t) => {
+    const server = await startServer();
+    t.after(() => server.stop());
+    const { client } = server;
+
+    /* The site's own locale is Hebrew; the reader was on the Spanish pages. One
+       site key serves every translation, so the request decides the name. */
+    const site = await withSite(client, { name: 'Multilingual', allowAnonymous: true, locale: 'he' });
+
+    const spanish = await client.call('/api/v1/visitors', {
+        method: 'POST',
+        body: { site: site.key, mode: 'anonymous', locale: 'es' },
+    });
+    assert.equal(spanish.status, 201);
+    assert.equal(spanish.body.visitor.name, 'Anónimo');
+
+    const chinese = await client.call('/api/v1/visitors', {
+        method: 'POST',
+        body: { site: site.key, mode: 'anonymous', locale: 'zh-CN' },
+    });
+    assert.equal(chinese.body.visitor.name, '匿名');
+
+    /* No locale on the request: the site's own setting still decides. */
+    const fallback = await client.call('/api/v1/visitors', {
+        method: 'POST',
+        body: { site: site.key, mode: 'anonymous' },
+    });
+    assert.equal(fallback.body.visitor.name, 'אנונימי');
+});

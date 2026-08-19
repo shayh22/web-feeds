@@ -5,6 +5,7 @@ import { hashIp } from '../crypto.js';
 import { cleanBody, cleanName, normalizePagePath } from '../../../shared/validation.js';
 import { decideStatus, scoreComment } from '../../../shared/moderation.js';
 import { isLikelyBot } from '../../../shared/bots.js';
+import { anonName as anonNameFor } from '../../../shared/locales.js';
 import { validateEmail } from '../email.js';
 import {
     createVisitor, findVisitorByEmail, findVisitorByToken, refreshVisitorToken, tokenFromRequest, touchVisitor,
@@ -13,8 +14,6 @@ import {
     all, allowedOriginsFor, blocklist, logAudit, one, publicComment, publicSite, run, shapeVisitor, siteByKey,
 } from '../store.js';
 import { limitOr429 } from '../ratelimit.js';
-
-const ANON_NAME = { he: 'אנונימי', en: 'Anonymous' };
 
 async function requireSite(ctx, key) {
     const site = await siteByKey(ctx.db, key);
@@ -114,7 +113,9 @@ async function registerVisitor(ctx, request, url, body) {
     await limitOr429(ctx.db, 'register', ctx.ipKey, ctx.config.rateLimits.register);
 
     const ipHash = await hashIp(ctx.ip, ctx.ipSalt);
-    const anonName = ANON_NAME[site.locale] || ANON_NAME.he;
+    /* The visitor's own reading language wins over the site default: one site
+       key can serve pages in several languages. */
+    const anonName = anonNameFor(body.locale || site.locale);
 
     if (body.mode === 'anonymous') {
         if (!site.allow_anonymous) {
@@ -227,7 +228,7 @@ async function createComment(ctx, request, url, body) {
     }
 
     const isAnonymous = visitor.kind === 'anonymous';
-    const anonName = ANON_NAME[site.locale] || ANON_NAME.he;
+    const anonName = anonNameFor(body.locale || site.locale);
     const authorName = cleanName(
         body.name || visitor.name,
         isAnonymous ? anonName : visitor.email.split('@')[0],

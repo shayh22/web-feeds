@@ -98,7 +98,225 @@
             viewsOne: 'view',
             viewsToday: 'today',
         },
+        ru: {
+            comments: 'Комментарии',
+            noComments: 'Пока нет комментариев. Будьте первым.',
+            writeComment: 'Напишите комментарий…',
+            send: 'Отправить',
+            sending: 'Отправляем…',
+            reply: 'Ответить',
+            replyTo: 'В ответ ',
+            cancel: 'Отмена',
+            identityTitle: 'Прежде чем писать',
+            identityLead: 'Регистрация в один шаг — или анонимный комментарий.',
+            emailLabel: 'Электронная почта',
+            nameLabel: 'Отображаемое имя (необязательно)',
+            registerEmail: 'Зарегистрироваться по почте',
+            continueAnonymous: 'Продолжить анонимно',
+            registering: 'Регистрируем…',
+            signedInAs: 'Вы пишете как',
+            anonymous: 'Аноним',
+            switchIdentity: 'Сменить пользователя',
+            pendingNotice: 'Комментарий отправлен и ожидает одобрения.',
+            publishedNotice: 'Комментарий опубликован.',
+            moderationNote: 'Комментарии проходят проверку перед публикацией.',
+            likeAdd: 'Нравится',
+            likeRemove: 'Убрать отметку',
+            likesCount: 'отметок «нравится»',
+            loadError: 'Не удалось загрузить комментарии.',
+            genericError: 'Что-то пошло не так. Попробуйте ещё раз.',
+            commentsClosed: 'Комментарии закрыты.',
+            charactersLeft: 'символов осталось',
+            justNow: 'только что',
+            views: 'просмотров',
+            viewsOne: 'просмотр',
+            viewsToday: 'сегодня',
+        },
+        es: {
+            comments: 'Comentarios',
+            noComments: 'Aún no hay comentarios. Sé el primero.',
+            writeComment: 'Escribe un comentario…',
+            send: 'Enviar',
+            sending: 'Enviando…',
+            reply: 'Responder',
+            replyTo: 'En respuesta a ',
+            cancel: 'Cancelar',
+            identityTitle: 'Antes de escribir',
+            identityLead: 'Registro en un solo paso — o comenta de forma anónima.',
+            emailLabel: 'Correo electrónico',
+            nameLabel: 'Nombre visible (opcional)',
+            registerEmail: 'Registrarse con el correo',
+            continueAnonymous: 'Continuar en anónimo',
+            registering: 'Registrando…',
+            signedInAs: 'Comentas como',
+            anonymous: 'Anónimo',
+            switchIdentity: 'Cambiar de identidad',
+            pendingNotice: 'Tu comentario se envió y está pendiente de aprobación.',
+            publishedNotice: 'Tu comentario se publicó.',
+            moderationNote: 'Los comentarios se revisan antes de publicarse.',
+            likeAdd: 'Me gusta',
+            likeRemove: 'Ya no me gusta',
+            likesCount: 'me gusta',
+            loadError: 'No pudimos cargar los comentarios.',
+            genericError: 'Algo salió mal. Inténtalo de nuevo.',
+            commentsClosed: 'Los comentarios están cerrados.',
+            charactersLeft: 'caracteres restantes',
+            justNow: 'ahora mismo',
+            views: 'visitas',
+            viewsOne: 'visita',
+            viewsToday: 'hoy',
+        },
+        zh: {
+            comments: '评论',
+            noComments: '还没有评论，来做第一个吧。',
+            writeComment: '写下你的评论…',
+            send: '发送',
+            sending: '发送中…',
+            reply: '回复',
+            replyTo: '回复 ',
+            cancel: '取消',
+            identityTitle: '写之前',
+            identityLead: '一步注册，或者匿名评论。',
+            emailLabel: '电子邮箱',
+            nameLabel: '显示名称（可选）',
+            registerEmail: '用邮箱注册',
+            continueAnonymous: '匿名继续',
+            registering: '注册中…',
+            signedInAs: '当前身份',
+            anonymous: '匿名',
+            switchIdentity: '切换身份',
+            pendingNotice: '评论已发送，等待审核。',
+            publishedNotice: '评论已发布。',
+            moderationNote: '评论会经过审核后才显示。',
+            likeAdd: '赞',
+            likeRemove: '取消赞',
+            likesCount: '个赞',
+            loadError: '无法加载评论。',
+            genericError: '出了点问题，请再试一次。',
+            commentsClosed: '评论已关闭。',
+            charactersLeft: '还可以输入',
+            justNow: '刚刚',
+            views: '次浏览',
+            viewsOne: '次浏览',
+            viewsToday: '今天',
+        },
     };
+
+    /* The API answers with a stable code and a Hebrew message. A widget reading
+       in another language shows its own wording for every code it knows and
+       falls back to the server's text for anything it does not. */
+    var ERRORS = {
+        he: {},
+        en: {
+            site_not_found: 'This site key is not recognised.',
+            origin_not_allowed: 'This domain is not allowed for this site.',
+            identity_required: 'Please sign up before sending.',
+            anonymous_not_allowed: 'This site requires signing up with an email address.',
+            visitor_blocked: 'This account is blocked.',
+            comments_disabled: 'Comments are switched off on this site.',
+            likes_disabled: 'Likes are switched off on this site.',
+            rejected: 'The request was rejected.',
+            too_fast: 'Just a moment before sending another comment.',
+            duplicate: 'You have already sent this comment.',
+            hourly_limit: 'You have reached the hourly comment limit.',
+            parent_not_found: 'The comment you are replying to was not found.',
+            body_required: 'A comment cannot be empty.',
+            body_too_long: 'This comment is too long.',
+            email_required: 'An email address is required.',
+            email_invalid: 'That email address is not valid.',
+            email_too_long: 'That email address is too long.',
+            email_disposable: 'Disposable email addresses are not accepted.',
+            email_domain_invalid: 'That email domain does not accept mail.',
+            email_domain_unreachable: 'No mail server found for that domain — please check the address.',
+            not_found: 'Not found.',
+            server_error: 'The server had a problem.',
+        },
+        ru: {
+            site_not_found: 'Ключ сайта не распознан.',
+            origin_not_allowed: 'Этот домен не разрешён для данного сайта.',
+            identity_required: 'Перед отправкой нужно зарегистрироваться.',
+            anonymous_not_allowed: 'На этом сайте нужна регистрация по электронной почте.',
+            visitor_blocked: 'Этот пользователь заблокирован.',
+            comments_disabled: 'Комментарии на этом сайте отключены.',
+            likes_disabled: 'Отметки «нравится» на этом сайте отключены.',
+            rejected: 'Запрос отклонён.',
+            too_fast: 'Подождите немного перед следующим комментарием.',
+            duplicate: 'Вы уже отправили этот комментарий.',
+            hourly_limit: 'Достигнут часовой лимит комментариев.',
+            parent_not_found: 'Комментарий, на который вы отвечаете, не найден.',
+            body_required: 'Комментарий не может быть пустым.',
+            body_too_long: 'Комментарий слишком длинный.',
+            email_required: 'Нужен адрес электронной почты.',
+            email_invalid: 'Адрес электронной почты неверный.',
+            email_too_long: 'Адрес электронной почты слишком длинный.',
+            email_disposable: 'Временные адреса почты не принимаются.',
+            email_domain_invalid: 'Этот почтовый домен не принимает письма.',
+            email_domain_unreachable: 'Для этого домена не найден почтовый сервер — проверьте адрес.',
+            not_found: 'Не найдено.',
+            server_error: 'Ошибка на сервере.',
+        },
+        es: {
+            site_not_found: 'Esta clave de sitio no se reconoce.',
+            origin_not_allowed: 'Este dominio no está permitido para este sitio.',
+            identity_required: 'Regístrate antes de enviar.',
+            anonymous_not_allowed: 'Este sitio exige registrarse con un correo electrónico.',
+            visitor_blocked: 'Esta cuenta está bloqueada.',
+            comments_disabled: 'Los comentarios están desactivados en este sitio.',
+            likes_disabled: 'Los me gusta están desactivados en este sitio.',
+            rejected: 'La solicitud fue rechazada.',
+            too_fast: 'Espera un momento antes de enviar otro comentario.',
+            duplicate: 'Ya has enviado este comentario.',
+            hourly_limit: 'Has alcanzado el límite de comentarios por hora.',
+            parent_not_found: 'No se encontró el comentario al que respondes.',
+            body_required: 'Un comentario no puede estar vacío.',
+            body_too_long: 'Este comentario es demasiado largo.',
+            email_required: 'Hace falta una dirección de correo.',
+            email_invalid: 'Esa dirección de correo no es válida.',
+            email_too_long: 'Esa dirección de correo es demasiado larga.',
+            email_disposable: 'No se aceptan correos desechables.',
+            email_domain_invalid: 'Ese dominio de correo no acepta mensajes.',
+            email_domain_unreachable: 'No se encontró servidor de correo para ese dominio — revisa la dirección.',
+            not_found: 'No encontrado.',
+            server_error: 'Hubo un problema en el servidor.',
+        },
+        zh: {
+            site_not_found: '无法识别该站点密钥。',
+            origin_not_allowed: '该域名未获此站点授权。',
+            identity_required: '发送前请先注册。',
+            anonymous_not_allowed: '本站点需要用邮箱注册。',
+            visitor_blocked: '该用户已被封禁。',
+            comments_disabled: '本站点已关闭评论。',
+            likes_disabled: '本站点已关闭点赞。',
+            rejected: '请求被拒绝。',
+            too_fast: '请稍等片刻再发下一条评论。',
+            duplicate: '你已经发过这条评论了。',
+            hourly_limit: '已达到每小时评论上限。',
+            parent_not_found: '找不到你要回复的评论。',
+            body_required: '评论不能为空。',
+            body_too_long: '这条评论太长了。',
+            email_required: '需要填写电子邮箱。',
+            email_invalid: '电子邮箱地址无效。',
+            email_too_long: '电子邮箱地址太长了。',
+            email_disposable: '不接受临时邮箱地址。',
+            email_domain_invalid: '该邮箱域名不接收邮件。',
+            email_domain_unreachable: '找不到该域名的邮件服务器 — 请检查地址。',
+            not_found: '未找到。',
+            server_error: '服务器出错了。',
+        },
+    };
+
+    /* Falls back through the base subtag, so "zh-CN" and "en-GB" both land on a
+       language we have strings for. */
+    function normalizeLocale(value, fallback) {
+        var tag = String(value || '').trim().toLowerCase().split(/[-_]/)[0];
+        return STRINGS[tag] ? tag : (fallback || '');
+    }
+
+    /* A page states its language on <html lang>, so a multilingual site gets
+       widgets in the reader's language without repeating it on every widget. */
+    var PAGE_LOCALE = normalizeLocale(document.documentElement.getAttribute('lang'), '')
+        || normalizeLocale(script.getAttribute('data-locale'), '')
+        || 'he';
 
     var CSS = [
         '.tlx{--tlx-fg:#1f2937;--tlx-muted:#6b7280;--tlx-bg:transparent;--tlx-card:#ffffff;',
@@ -316,8 +534,9 @@
         this.kind = (node.getAttribute('data-tells') || 'comments').toLowerCase();
         this.page = pagePathOf(node);
         this.pageTitle = node.getAttribute('data-title') || document.title;
-        this.locale = node.getAttribute('data-locale') || 'he';
-        this.strings = STRINGS[this.locale] || STRINGS.he;
+        this.locale = normalizeLocale(node.getAttribute('data-locale'), PAGE_LOCALE);
+        this.strings = STRINGS[this.locale];
+        this.errors = ERRORS[this.locale] || ERRORS.he;
         this.store = identityStore(this.siteKey);
         this.identity = this.store.read();
         this.site = null;
@@ -326,6 +545,11 @@
         node.classList.add('tlx');
         if (node.getAttribute('data-theme')) node.setAttribute('data-theme', node.getAttribute('data-theme'));
     }
+
+    Widget.prototype.messageFor = function (error, fallback) {
+        if (!error) return fallback || this.strings.genericError;
+        return this.errors[error.code] || error.message || fallback || this.strings.genericError;
+    };
 
     Widget.prototype.token = function () {
         return this.identity && this.identity.token ? this.identity.token : '';
@@ -406,7 +630,7 @@
                     onReady();
                 })
                 .catch(function (error) {
-                    message.textContent = error.message || strings.genericError;
+                    message.textContent = self.messageFor(error);
                     message.hidden = false;
                 })
                 .then(function () {
@@ -419,11 +643,17 @@
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            register({ site: self.siteKey, mode: 'email', email: email.value, name: name.value }, submit);
+            register({
+                site: self.siteKey, mode: 'email', locale: self.locale,
+                email: email.value, name: name.value,
+            }, submit);
         });
         if (anonButton) {
             anonButton.addEventListener('click', function () {
-                register({ site: self.siteKey, mode: 'anonymous', name: name.value }, anonButton);
+                register({
+                    site: self.siteKey, mode: 'anonymous', locale: self.locale,
+                    name: name.value,
+                }, anonButton);
             });
         }
     };
@@ -480,7 +710,7 @@
             if (self.site && self.site.allowAnonymous) {
                 return request('/api/v1/visitors' + self.query(), {
                     method: 'POST',
-                    body: { site: self.siteKey, mode: 'anonymous' },
+                    body: { site: self.siteKey, mode: 'anonymous', locale: self.locale },
                 }).then(function (data) {
                     self.identity = { token: data.token, visitor: data.visitor };
                     self.store.write(self.identity);
@@ -508,7 +738,7 @@
                 .then(paint)
                 .catch(function (err) {
                     if (err.status === 401) self.store.clear();
-                    error.textContent = err.message || strings.genericError;
+                    error.textContent = self.messageFor(err);
                     error.hidden = false;
                 })
                 .then(function () { button.disabled = false; });
@@ -521,7 +751,7 @@
                 button.disabled = false;
             })
             .catch(function (err) {
-                error.textContent = err.message || strings.genericError;
+                error.textContent = self.messageFor(err);
                 error.hidden = false;
             });
     };
@@ -553,7 +783,7 @@
                 self.render(data);
             })
             .catch(function (error) {
-                self.fail(error.message || self.strings.loadError);
+                self.fail(self.messageFor(error, self.strings.loadError));
             });
     };
 
@@ -729,6 +959,7 @@
                     page: self.page,
                     pageUrl: window.location.href,
                     pageTitle: self.pageTitle,
+                    locale: self.locale,
                     body: textarea.value,
                     parentId: self.replyTo ? self.replyTo.id : null,
                     hp: honeypot.value,
@@ -752,7 +983,7 @@
                         return;
                     }
                     message.className = 'tlx-msg tlx-err';
-                    message.textContent = error.message || strings.genericError;
+                    message.textContent = self.messageFor(error);
                     message.hidden = false;
                 })
                 .then(function () {

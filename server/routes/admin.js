@@ -4,6 +4,7 @@
 import { HttpError, cookieHeader, readJsonBody, sendJson } from '../util/http.js';
 import { hashIp, newSiteKey } from '../util/crypto.js';
 import { normalizeOrigin } from '../util/validation.js';
+import { normalizeLocale } from '../../shared/locales.js';
 import {
     checkAdminPassword, createAdminSession, destroyAdminSession, readAdminSession, setAdminPassword,
 } from '../auth.js';
@@ -227,7 +228,7 @@ function createSite(ctx, res, body) {
             body.commentsOn === false ? 0 : 1,
             body.likesOn === false ? 0 : 1,
             body.viewsOn === false ? 0 : 1,
-            body.locale === 'en' ? 'en' : 'he',
+            normalizeLocale(body.locale),
             new Date().toISOString(),
         );
     const row = ctx.db.prepare('SELECT * FROM sites WHERE id = ?').get(info.lastInsertRowid);
@@ -247,7 +248,7 @@ function updateSite(ctx, res, id, body) {
         comments_on: body.commentsOn !== undefined ? (body.commentsOn ? 1 : 0) : existing.comments_on,
         likes_on: body.likesOn !== undefined ? (body.likesOn ? 1 : 0) : existing.likes_on,
         views_on: body.viewsOn !== undefined ? (body.viewsOn ? 1 : 0) : existing.views_on,
-        locale: body.locale !== undefined ? (body.locale === 'en' ? 'en' : 'he') : existing.locale,
+        locale: body.locale !== undefined ? normalizeLocale(body.locale) : existing.locale,
         active: body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
     };
     ctx.db.prepare(`UPDATE sites SET name = ?, origins = ?, moderation = ?, allow_anonymous = ?,

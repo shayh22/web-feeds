@@ -12,10 +12,10 @@ import {
 } from '../auth.js';
 import { decideStatus, getBlocklist, scoreComment } from '../../shared/moderation.js';
 import { isLikelyBot } from '../../shared/bots.js';
+import { anonName as anonNameFor } from '../../shared/locales.js';
 import { getSetting, logAudit } from '../db.js';
 import { rateLimit } from '../ratelimit.js';
 
-const ANON_NAME = { he: 'אנונימי', en: 'Anonymous' };
 
 export function siteByKey(db, key) {
     if (!key) return null;
@@ -133,7 +133,9 @@ async function registerVisitor(ctx, req, res, url, body) {
 
     const ipHash = hashIp(ctx.ipOf(req), ctx.ipSalt);
     const mode = body.mode === 'anonymous' ? 'anonymous' : 'email';
-    const anonName = ANON_NAME[site.locale] || ANON_NAME.he;
+    /* The visitor's own reading language wins over the site default: one site
+       key can serve pages in several languages. */
+    const anonName = anonNameFor(body.locale || site.locale);
 
     if (mode === 'anonymous') {
         if (!site.allow_anonymous) {
@@ -263,7 +265,7 @@ async function createComment(ctx, req, res, url, body) {
     }
 
     const isAnonymous = visitor.kind === 'anonymous';
-    const anonName = ANON_NAME[site.locale] || ANON_NAME.he;
+    const anonName = anonNameFor(body.locale || site.locale);
     const authorName = isAnonymous
         ? cleanName(body.name || visitor.name, anonName, ctx.config.maxNameLength)
         : cleanName(body.name || visitor.name, visitor.email.split('@')[0], ctx.config.maxNameLength);
